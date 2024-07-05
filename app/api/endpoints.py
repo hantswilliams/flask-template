@@ -13,6 +13,8 @@ jwt = JWTManager()
 class HelloWorld(Resource):
     @jwt_required()
     @swag_from({
+        'summary': 'Hello World',
+        'description': 'Returns a Hello World message. Requires a valid JWT token.',
         'responses': {
             200: {
                 'description': 'A Hello World message',
@@ -38,6 +40,8 @@ class HelloWorld(Resource):
 
 class TokenResource(Resource):
     @swag_from({
+        'summary': 'Generate API Token',
+        'description': 'Generates an API token for a user with valid credentials.',
         'parameters': [
             {
                 'name': 'body',
@@ -99,12 +103,72 @@ class TokenResource(Resource):
 class AdminOnlyResource(Resource):
     @jwt_required()
     @role_required('admin')
+    @swag_from({
+        'summary': 'Admin Only Resource',
+        'description': 'Returns a message for admin users only. Requires a valid JWT token and admin role.',
+        'responses': {
+            200: {
+                'description': 'Admin message',
+                'examples': {
+                    'application/json': {
+                        'message': 'Hello, Admin!'
+                    }
+                }
+            },
+            401: {
+                'description': 'Missing or invalid token',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Missing Authorization Header'
+                    }
+                }
+            },
+            403: {
+                'description': 'Forbidden: User does not have the required role',
+                'examples': {
+                    'application/json': {
+                        'msg': 'User does not have the required role'
+                    }
+                }
+            }
+        }
+    })
     def get(self):
         return {'message': 'Hello, Admin!'}
 
 class UserOnlyResource(Resource):
     @jwt_required()
     @role_required('user')
+    @swag_from({
+        'summary': 'User Only Resource',
+        'description': 'Returns a message for users only. Requires a valid JWT token and user role.',
+        'responses': {
+            200: {
+                'description': 'User message',
+                'examples': {
+                    'application/json': {
+                        'message': 'Hello, User!'
+                    }
+                }
+            },
+            401: {
+                'description': 'Missing or invalid token',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Missing Authorization Header'
+                    }
+                }
+            },
+            403: {
+                'description': 'Forbidden: User does not have the required role',
+                'examples': {
+                    'application/json': {
+                        'msg': 'User does not have the required role'
+                    }
+                }
+            }
+        }
+    })
     def get(self):
         return {'message': 'Hello, User!'}
 

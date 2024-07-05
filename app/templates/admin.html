@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+    <div class="w-full max-w-4xl bg-white rounded-lg shadow-md p-8">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-4">Admin Dashboard</h1>
+        
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Create New User</h2>
+            <form method="POST" action="{{ url_for('main.admin') }}">
+                {{ create_user_form.hidden_tag() }}
+                <input type="hidden" name="form_name" value="create_user_form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                        {{ create_user_form.username.label }}
+                    </label>
+                    {{ create_user_form.username(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% for error in create_user_form.username.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                        {{ create_user_form.email.label }}
+                    </label>
+                    {{ create_user_form.email(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% for error in create_user_form.email.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                        {{ create_user_form.password.label }}
+                    </label>
+                    {{ create_user_form.password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% for error in create_user_form.password.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="confirm_password">
+                        {{ create_user_form.confirm_password.label }}
+                    </label>
+                    {{ create_user_form.confirm_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% for error in create_user_form.confirm_password.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex items-center justify-between">
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                        Create User
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Create New Role</h2>
+            <form method="POST" action="{{ url_for('main.admin') }}">
+                {{ create_role_form.hidden_tag() }}
+                <input type="hidden" name="form_name" value="create_role_form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="role">
+                        {{ create_role_form.role.label }}
+                    </label>
+                    {{ create_role_form.role(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% for error in create_role_form.role.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex items-center justify-between">
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                        Create Role
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Set API Endpoint Permissions</h2>
+            <form method="POST" action="{{ url_for('main.admin') }}">
+                {{ set_permissions_form.hidden_tag() }}
+                <input type="hidden" name="form_name" value="set_permissions_form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="user">
+                        User
+                    </label>
+                    {{ set_permissions_form.user(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="endpoint">
+                        API Endpoint
+                    </label>
+                    {{ set_permissions_form.endpoint(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                    {% for error in set_permissions_form.endpoint.errors %}
+                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="role">
+                        Role
+                    </label>
+                    {{ set_permissions_form.role(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Permissions
+                    </label>
+                    <div class="flex flex-col">
+                        <label class="inline-flex items-center mt-2">
+                            {{ set_permissions_form.can_read(class="form-checkbox h-5 w-5 text-blue-600") }}
+                            <span class="ml-2">Read</span>
+                        </label>
+                        <label class="inline-flex items-center mt-2">
+                            {{ set_permissions_form.can_write(class="form-checkbox h-5 w-5 text-blue-600") }}
+                            <span class="ml-2">Write</span>
+                        </label>
+                        <label class="inline-flex items-center mt-2">
+                            {{ set_permissions_form.can_update(class="form-checkbox h-5 w-5 text-blue-600") }}
+                            <span class="ml-2">Update</span>
+                        </label>
+                        <label class="inline-flex items-center mt-2">
+                            {{ set_permissions_form.can_delete(class="form-checkbox h-5 w-5 text-blue-600") }}
+                            <span class="ml-2">Delete</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                        Set Permissions
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

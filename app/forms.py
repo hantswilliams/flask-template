@@ -1,9 +1,10 @@
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, FileField
-from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from flask_wtf.file import FileAllowed
-from app.models import User
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField, BooleanField, SelectField, PasswordField, FileField
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from flask_login import current_user
+from app.models import User
+
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
@@ -45,3 +46,17 @@ class UpdateAccountForm(FlaskForm):
             user = User.query.filter_by(email=email.data).first()
             if user:
                 raise ValidationError('That email is taken. Please choose a different one.')
+
+class AdminCreateRoleForm(FlaskForm):
+    role = StringField('Role', validators=[DataRequired()])
+    submit = SubmitField('Create Role')
+
+class AdminSetPermissionsForm(FlaskForm):
+    user = SelectField('User', validators=[DataRequired()], choices=[])  # SelectField for users
+    endpoint = SelectField('API Endpoint', validators=[DataRequired()], choices=[])  # SelectField for API endpoints
+    role = SelectField('Role', validators=[DataRequired()], choices=[])  # SelectField for roles
+    can_read = BooleanField('Read')
+    can_write = BooleanField('Write')
+    can_update = BooleanField('Update')
+    can_delete = BooleanField('Delete')
+    submit = SubmitField('Set Permissions')
