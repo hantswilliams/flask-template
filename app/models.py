@@ -5,9 +5,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return BaseUser.query.get(int(user_id))
 
-class User(db.Model, UserMixin):
+class BaseUser(db.Model, UserMixin):
+    __tablename__ = 'baseuser'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -26,23 +27,25 @@ class User(db.Model, UserMixin):
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns} 
 
-class Role(db.Model):
+class BaseRole(db.Model):
+    __tablename__ = 'baserole'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
-class Permission(db.Model):
+class BasePermission(db.Model):
+    __tablename__ = 'basepermission'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('baseuser.id'), nullable=False)
     endpoint = db.Column(db.String(128))
     role = db.Column(db.String(64))
     can_read = db.Column(db.Boolean, default=False)
     can_write = db.Column(db.Boolean, default=False)
     can_update = db.Column(db.Boolean, default=False)
     can_delete = db.Column(db.Boolean, default=False)
-    user = db.relationship('User', backref=db.backref('permissions', lazy=True))
+    user = db.relationship('BaseUser', backref=db.backref('basepermissions', lazy=True))
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -54,7 +57,7 @@ class CustomerMetaData(db.Model):
     name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False)
     phone = db.Column(db.String(20), nullable=True)
-    orders = db.relationship('Order', backref=db.backref('customer'), lazy='joined')
+    orders = db.relationship('Order', backref=db.backref('customer'), lazy='joined', cascade='all, delete-orphan')
 
     def as_dict(self):
         data = {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -65,7 +68,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ordernumber = db.Column(db.String(128), nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey('customer_meta_data.id'), nullable=False)
-    items = db.relationship('OrderItem', backref=db.backref('order'), lazy='joined')
+    items = db.relationship('OrderItem', backref=db.backref('order'), lazy='joined', cascade='all, delete-orphan')
 
     def as_dict(self):
         data = {c.name: getattr(self, c.name) for c in self.__table__.columns}

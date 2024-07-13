@@ -1,7 +1,7 @@
 from functools import wraps
 from flask_jwt_extended import get_jwt_identity
 from flask import request, jsonify
-from app.models import User, Permission
+from app.models import BaseUser, BasePermission
 
 def dynamic_role_required(can_read=False, can_write=False, can_update=False, can_delete=False):
     def decorator(f):
@@ -10,7 +10,7 @@ def dynamic_role_required(can_read=False, can_write=False, can_update=False, can
             try:
                 current_user_id = get_jwt_identity()
                 print(f"current_user_id: {current_user_id}")
-                user = User.query.get(current_user_id)
+                user = BaseUser.query.get(current_user_id)
 
                 if user is None:
                     print("User not found")
@@ -18,7 +18,7 @@ def dynamic_role_required(can_read=False, can_write=False, can_update=False, can
 
                 path = request.path
                 print(f"Checking permissions for user: {user.username}, path: {path}")
-                permission = Permission.query.filter_by(user_id=user.id, endpoint=path).first()
+                permission = BasePermission.query.filter_by(user_id=user.id, endpoint=path).first()
 
                 if permission is None:
                     print(f"Permission not found for user {user.username} on endpoint {path}")

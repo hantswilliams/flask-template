@@ -4,7 +4,7 @@ from PIL import Image
 from flask import Blueprint, render_template, url_for, flash, redirect, request, current_app, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Role, Permission
+from app.models import BaseUser, BaseRole, BasePermission
 from app.forms import RegistrationForm, AdminCreateRoleForm, AdminSetPermissionsForm
 from app.utils import get_api_endpoints
 
@@ -20,8 +20,8 @@ def admin_home():
     create_role_form = AdminCreateRoleForm()
     set_permissions_form = AdminSetPermissionsForm()
 
-    roles = Role.query.all()
-    users = User.query.all()
+    roles = BaseRole.query.all()
+    users = BaseUser.query.all()
 
     set_permissions_form.role.choices = [(role.name, role.name) for role in roles]
     set_permissions_form.user.choices = [(user.id, user.username) for user in users]
@@ -30,7 +30,7 @@ def admin_home():
     set_permissions_form.endpoint.choices = [(endpoint, endpoint) for endpoint in api_endpoints]
 
     if create_user_form.validate_on_submit() and request.form.get('form_name') == 'create_user_form':
-        user = User(username=create_user_form.username.data, email=create_user_form.email.data, role=request.form.get('role'))
+        user = BaseUser(username=create_user_form.username.data, email=create_user_form.email.data, role=request.form.get('role'))
         user.set_password(create_user_form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -38,14 +38,14 @@ def admin_home():
         return redirect(url_for('admin.admin_home'))
 
     if create_role_form.validate_on_submit() and request.form.get('form_name') == 'create_role_form':
-        role = Role(name=create_role_form.role.data)
+        role = BaseRole(name=create_role_form.role.data)
         db.session.add(role)
         db.session.commit()
         flash('Role created successfully!', 'success')
         return redirect(url_for('admin.admin_home'))
 
     if set_permissions_form.validate_on_submit() and request.form.get('form_name') == 'set_permissions_form':
-        existing_permission = Permission.query.filter_by(
+        existing_permission = BasePermission.query.filter_by(
             user_id=set_permissions_form.user.data,
             endpoint=set_permissions_form.endpoint.data,
             role=set_permissions_form.role.data
@@ -54,7 +54,7 @@ def admin_home():
         if existing_permission:
             flash('This user already has permissions for this API endpoint and role.', 'warning')
         else:
-            permission = Permission(
+            permission = BasePermission(
                 user_id=set_permissions_form.user.data,
                 endpoint=set_permissions_form.endpoint.data,
                 role=set_permissions_form.role.data,
@@ -68,7 +68,7 @@ def admin_home():
             flash('Permissions set successfully!', 'success')
         return redirect(url_for('admin.admin_home'))
 
-    permissions = db.session.query(Permission, User).join(User).all()
+    permissions = db.session.query(BasePermission, BaseUser).join(BaseUser).all()
 
     return render_template('admin.html', create_user_form=create_user_form, create_role_form=create_role_form, set_permissions_form=set_permissions_form, roles=roles, users=users, permissions=permissions)
 
@@ -77,7 +77,7 @@ def admin_home():
 def edit_user(user_id):
     if current_user.role != 'admin':
         return redirect(url_for('main.home'))
-    user = User.query.get_or_404(user_id)
+    user = BaseUser.query.get_or_404(user_id)
     data = request.get_json()
     user.username = data.get('username', user.username)
     user.email = data.get('email', user.email)
@@ -90,7 +90,7 @@ def edit_user(user_id):
 def delete_user(user_id):
     if current_user.role != 'admin':
         return redirect(url_for('main.home'))
-    user = User.query.get_or_404(user_id)
+    user = BaseUser.query.get_or_404(user_id)
     db.session.delete(user)
     db.session.commit()
     flash('User deleted successfully!', 'success')    
@@ -102,7 +102,7 @@ def delete_user(user_id):
 def soft_delete_user(user_id):
     if current_user.role != 'admin':
         return redirect(url_for('main.home'))
-    user = User.query.get_or_404(user_id)
+    user = BaseUser.query.get_or_404(user_id)
     user.active = False
     db.session.commit()
     return jsonify({'message': 'User deactivated successfully'})
@@ -113,7 +113,7 @@ def soft_delete_user(user_id):
 def restore_user(user_id):
     if current_user.role != 'admin':
         return redirect(url_for('main.home'))
-    user = User.query.get_or_404(user_id)
+    user = BaseUser.query.get_or_404(user_id)
     user.active = True
     db.session.commit()
     return jsonify({'message': 'User restored successfully'})
@@ -129,7 +129,7 @@ def update_permission():
     permission = data['permission']
     value = data['value']
 
-    perm = Permission.query.filter_by(user_id=user_id, endpoint=endpoint).first()
+    perm = BasePermission.query.filter_by(user_id=user_id, endpoint=endpoint).first()
     if not perm:
         return jsonify({'message': 'Permission not found'}), 404
 
@@ -154,7 +154,7 @@ def delete_permission():
     user_id = data['user_id']
     endpoint = data['endpoint']
 
-    perm = Permission.query.filter_by(user_id=user_id, endpoint=endpoint).first()
+    perm = BasePermission.query.filter_by(user_id=user_id, endpoint=endpoint).first()
     if not perm:
         return jsonify({'message': 'Permission not found'}), 404
 

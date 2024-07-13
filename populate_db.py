@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import User, Role, Permission, CustomerMetaData, Order, OrderItem
+from app.models import BaseUser, BaseRole, BasePermission, CustomerMetaData, Order, OrderItem
 
 app = create_app()
 
@@ -7,16 +7,16 @@ with app.app_context():
     db.create_all()
 
     ## Create roles and users
-    if not User.query.first():
-        admin = User(username='admin', email='admin@example.com', role='admin')
+    if not BaseUser.query.first():
+        admin = BaseUser(username='admin', email='admin@example.com', role='admin')
         admin.set_password('password')
         db.session.add(admin)
 
-        user1 = User(username='user1', email='user1@example.com', role='user')
+        user1 = BaseUser(username='user1', email='user1@example.com', role='user')
         user1.set_password('password')
         db.session.add(user1)
 
-        user2 = User(username='user2', email='user2@example.com', role='user')
+        user2 = BaseUser(username='user2', email='user2@example.com', role='user')
         user2.set_password('password')
         db.session.add(user2)
 
@@ -26,8 +26,8 @@ with app.app_context():
         print("Database already populated.")
 
     ## Create a 'default' role
-    if not Role.query.first():
-        default_role = Role(name='default')
+    if not BaseRole.query.first():
+        default_role = BaseRole(name='default')
         db.session.add(default_role)
         db.session.commit()
         print("Default role created.")
@@ -35,10 +35,10 @@ with app.app_context():
         print("Default role already created.")
 
     # ## Make sure the 'admin' user has read, write, update, and delete permissions for all base API endpoints
-    if not Permission.query.first():
+    if not BasePermission.query.first():
         api_endpoints = ['/api/hello']
         for endpoint in api_endpoints:
-            permission = Permission(
+            permission = BasePermission(
                 user_id=1,
                 endpoint=endpoint,
                 role='admin',

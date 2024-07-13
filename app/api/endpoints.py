@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, abort
 from flask_restful import Api, Resource
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from app.models import User
+from app.models import BaseUser
 from werkzeug.security import check_password_hash
 from flasgger import swag_from
 from app.decorators import dynamic_role_required
@@ -64,7 +64,7 @@ class TokenResource(Resource):
         if not data or not data.get('email') or not data.get('password'):
             return {'message': 'Invalid request'}, 400
 
-        user = User.query.filter_by(email=data['email']).first()
+        user = BaseUser.query.filter_by(email=data['email']).first()
         if user and check_password_hash(user.password_hash, data['password']):
             access_token = create_access_token(identity=user.id, expires_delta=False)
             return {'access_token': access_token}, 200

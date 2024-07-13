@@ -8,7 +8,7 @@
         <h2 class="text-2xl font-bold text-gray-800 mb-4" id="table-title">
             {{ table_name }}
         </h2>
-        <button id="add-new-item" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">Add New Item</button>
+        <button id="add-new-item" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">Add</button>
         <table id="crud-table" class="min-w-full bg-white border display">
             <thead>
                 <tr id="table-head">
@@ -25,7 +25,7 @@
 <!-- Modal for creating/updating item -->
 <div id="itemModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-        <h2 class="text-2xl font-bold mb-4" id="modal-title">Add Item</h2>
+        <h2 class="text-2xl font-bold mb-4" id="modal-title">Add</h2>
         <form id="itemForm">
             <div id="form-fields">
                 <!-- Form fields will be injected by JavaScript -->
@@ -117,7 +117,7 @@
 
             if (currentItemID && currentItemID !== 'None') {
                 if (idColumnIndex !== -1) {
-                    dataTable.column(idColumnIndex).search(currentItemID).draw();
+                    dataTable.column(idColumnIndex).search(`^${currentItemID}$`, true, false).draw();
                 } else {
                     dataTable.search(currentItemID).draw();
                 }
@@ -186,7 +186,7 @@
         $('#form-fields').empty();
 
         if (itemId) {
-            $('#modal-title').text('Edit Item');
+            $('#modal-title').text('Edit ' + currentTableName);
             $.get(`/crud/api/${currentTableName}/${itemId}`, function(data) {
                 let flatData = flatten(data);
                 Object.keys(flatData).forEach(key => {
@@ -207,7 +207,8 @@
                 });
             });
         } else {
-            $('#modal-title').text('Add Item');
+            // show text with currentTableName
+            $('#modal-title').text('Add ' + currentTableName);
             // Assuming the first row data has all keys
             $.get(`/crud/api/${currentTableName}`, function(data) {
                 if (data.length > 0) {

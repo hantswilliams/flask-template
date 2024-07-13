@@ -1,11 +1,11 @@
 from flask import current_app
-from app.models import User, Role, Permission, CustomerMetaData, Order, OrderItem
+from app.models import BaseUser, BaseRole, BasePermission, CustomerMetaData, Order, OrderItem
 
 # A dictionary to map table names to their corresponding models
 TABLE_MODEL_MAP = {
-    'user': User,
-    'role': Role,
-    'permission': Permission,
+    'baseuser': BaseUser,
+    'baserole': BaseRole,
+    'basepermission': BasePermission,
     'customer_meta_data': CustomerMetaData,
     'order': Order,
     'item': OrderItem,

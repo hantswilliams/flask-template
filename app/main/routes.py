@@ -4,7 +4,7 @@ from PIL import Image
 from flask import Blueprint, render_template, url_for, flash, redirect, request, current_app, jsonify
 from flask_login import login_user, current_user, logout_user, login_required
 from app import db
-from app.models import User
+from app.models import BaseUser
 from app.forms import RegistrationForm, LoginForm, UpdateAccountForm
 from app.utils import TABLE_MODEL_MAP
 
@@ -103,7 +103,7 @@ def register():
         return redirect(url_for('main.home'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
+        user = BaseUser(username=form.username.data, email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -117,7 +117,7 @@ def login():
         return redirect(url_for('main.home'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = BaseUser.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')

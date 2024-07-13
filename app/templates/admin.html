@@ -6,54 +6,91 @@
 <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100">
     <div class="w-full max-w-6xl bg-white rounded-lg shadow-md p-8">
         
-        <!-- Create New User Section -->
+        <!-- List of Users Section -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Create New User</h2>
-            <form method="POST" action="{{ url_for('admin.admin_home') }}">
-                {{ create_user_form.hidden_tag() }}
-                <input type="hidden" name="form_name" value="create_user_form">
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
-                        {{ create_user_form.username.label }}
-                    </label>
-                    {{ create_user_form.username(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                    {% for error in create_user_form.username.errors %}
-                        <p class="text-red-500 text-xs italic">{{ error }}</p>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">User List</h2>
+            <button id="openCreateUserModal" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">Create New User</button>
+            <table id="users-table" class="min-w-full bg-white border display">
+                <thead>
+                    <tr>
+                        <th class="py-2 px-4 border-b">Username</th>
+                        <th class="py-2 px-4 border-b">Email</th>
+                        <th class="py-2 px-4 border-b">Status</th>
+                        <th class="py-2 px-4 border-b">Role</th>
+                        <th class="py-2 px-4 border-b">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td class="py-2 px-4 border-b">{{ user.username }}</td>
+                        <td class="py-2 px-4 border-b">{{ user.email }}</td>
+                        <td class="py-2 px-4 border-b">{{ 'Active' if user.active else 'Inactive' }}</td>
+                        <td class="py-2 px-4 border-b">{{ user.role }}</td>
+                        <td class="py-2 px-4 border-b">
+                            {% if user.active %}
+                                <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline" onclick="deactivateUser({{ user.id }})">Deactivate</button>
+                            {% else %}
+                                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline" onclick="restoreUser({{ user.id }})">Restore</button>
+                            {% endif %}
+                        </td>
+                    </tr>
                     {% endfor %}
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
-                        {{ create_user_form.email.label }}
-                    </label>
-                    {{ create_user_form.email(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                    {% for error in create_user_form.email.errors %}
-                        <p class="text-red-500 text-xs italic">{{ error }}</p>
-                    {% endfor %}
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
-                        {{ create_user_form.password.label }}
-                    </label>
-                    {{ create_user_form.password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                    {% for error in create_user_form.password.errors %}
-                        <p class="text-red-500 text-xs italic">{{ error }}</p>
-                    {% endfor %}
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="confirm_password">
-                        {{ create_user_form.confirm_password.label }}
-                    </label>
-                    {{ create_user_form.confirm_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                    {% for error in create_user_form.confirm_password.errors %}
-                        <p class="text-red-500 text-xs italic">{{ error }}</p>
-                    {% endfor %}
-                </div>
-                <div class="flex items-center justify-between">
-                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
-                        Create User
-                    </button>
-                </div>
-            </form>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Create New User Modal -->
+        <div id="createUserModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+                <h2 class="text-2xl font-bold mb-4">Create New User</h2>
+                <form method="POST" action="{{ url_for('admin.admin_home') }}">
+                    {{ create_user_form.hidden_tag() }}
+                    <input type="hidden" name="form_name" value="create_user_form">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                            {{ create_user_form.username.label }}
+                        </label>
+                        {{ create_user_form.username(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                        {% for error in create_user_form.username.errors %}
+                            <p class="text-red-500 text-xs italic">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                            {{ create_user_form.email.label }}
+                        </label>
+                        {{ create_user_form.email(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                        {% for error in create_user_form.email.errors %}
+                            <p class="text-red-500 text-xs italic">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                            {{ create_user_form.password.label }}
+                        </label>
+                        {{ create_user_form.password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                        {% for error in create_user_form.password.errors %}
+                            <p class="text-red-500 text-xs italic">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="confirm_password">
+                            {{ create_user_form.confirm_password.label }}
+                        </label>
+                        {{ create_user_form.confirm_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                        {% for error in create_user_form.confirm_password.errors %}
+                            <p class="text-red-500 text-xs italic">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                            Create User
+                        </button>
+                        <button type="button" id="closeCreateUserModal" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Create New Role Section -->
@@ -181,39 +218,6 @@
                 </tbody>
             </table>
         </div>
-
-        <!-- List of Users Section -->
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">User List</h2>
-            <table id="users-table" class="min-w-full bg-white border display">
-                <thead>
-                    <tr>
-                        <th class="py-2 px-4 border-b">Username</th>
-                        <th class="py-2 px-4 border-b">Email</th>
-                        <th class="py-2 px-4 border-b">Status</th>
-                        <th class="py-2 px-4 border-b">Role</th>
-                        <th class="py-2 px-4 border-b">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr>
-                        <td class="py-2 px-4 border-b">{{ user.username }}</td>
-                        <td class="py-2 px-4 border-b">{{ user.email }}</td>
-                        <td class="py-2 px-4 border-b">{{ 'Active' if user.active else 'Inactive' }}</td>
-                        <td class="py-2 px-4 border-b">{{ user.role }}</td>
-                        <td class="py-2 px-4 border-b">
-                            {% if user.active %}
-                                <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline" onclick="deactivateUser({{ user.id }})">Deactivate</button>
-                            {% else %}
-                                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline" onclick="restoreUser({{ user.id }})">Restore</button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
 
@@ -228,7 +232,6 @@
         </div>
     </div>
 </div>
-
 
 <script>
     $(document).ready(function() {
@@ -345,6 +348,16 @@
                 }
             });
         };
+
+        // Open create user modal
+        $('#openCreateUserModal').on('click', function() {
+            $('#createUserModal').removeClass('hidden');
+        });
+
+        // Close create user modal
+        $('#closeCreateUserModal').on('click', function() {
+            $('#createUserModal').addClass('hidden');
+        });
     });
 </script>
 {% endblock %}
