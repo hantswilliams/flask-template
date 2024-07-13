@@ -1,0 +1,32 @@
+<table class="min-w-full bg-white border nested-table">
+    <thead>
+        <tr>
+            <th class="py-2 px-4 border-b">Field</th>
+            <th class="py-2 px-4 border-b">Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in nested_data.items() %}
+        <tr>
+            <td class="py-2 px-4 border-b">{{ key }}</td>
+            <td class="py-2 px-4 border-b">
+                {% if value is iterable and value is not string and value|length > 0 and value[0] is mapping %}
+                    <ul>
+                        {% for item in value %}
+                            <li>{% with nested_data=item %}
+                                {% include 'nested_template.html' %}
+                            {% endwith %}</li>
+                        {% endfor %}
+                    </ul>
+                {% elif value is mapping %}
+                    {% with nested_data=value %}
+                        {% include 'nested_template.html' %}
+                    {% endwith %}
+                {% else %}
+                    {{ value }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

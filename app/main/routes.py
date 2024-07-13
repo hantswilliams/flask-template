@@ -1,15 +1,38 @@
 import os
 import secrets
 from PIL import Image
-from flask import Blueprint, render_template, url_for, flash, redirect, request, current_app
+from flask import Blueprint, render_template, url_for, flash, redirect, request, current_app, jsonify
 from flask_login import login_user, current_user, logout_user, login_required
 from app import db
-from app.models import User, Role, Permission
-from app.forms import RegistrationForm, LoginForm, UpdateAccountForm, AdminCreateRoleForm, AdminSetPermissionsForm
-from app.utils import get_api_endpoints
-
+from app.models import User
+from app.forms import RegistrationForm, LoginForm, UpdateAccountForm
+from app.utils import TABLE_MODEL_MAP
 
 main = Blueprint('main', __name__)
+
+def get_nested_data(obj, depth=1, parent_data=None):
+    if depth > 3:  # Adjust the depth limit as needed
+        return obj.__dict__
+    
+    data = {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+    
+    # Combine parent data with current data if parent_data is provided
+    if parent_data:
+        data.update(parent_data)
+
+    print(f"Depth {depth}: {data}")  # Debugging print
+
+    for key, value in obj.__dict__.items():
+        if key.startswith('_') or key in data:  # Skip internal attributes and already added columns
+            continue
+        if isinstance(value, list):
+            data[key] = [get_nested_data(v, depth + 1, data) for v in value]
+        elif hasattr(value, '__dict__'):
+            data[key] = get_nested_data(value, depth + 1, data)
+        else:
+            data[key] = value
+    return data
+
 
 @main.app_errorhandler(401)
 def error_401(error):
@@ -30,6 +53,37 @@ def error_403(error):
 @main.route('/')
 def home():
     return render_template('home.html')
+
+@main.route('/get_tables', methods=['GET'])
+def get_tables():
+    tables = db.metadata.tables.keys()
+    print(f"Tables: {tables}")
+    return jsonify(list(tables))
+
+
+@main.route('/datatable/<string:table_name>', methods=['GET'])
+@main.route('/datatable/<string:table_name>/<int:item_id>', methods=['GET'])
+def datatable(table_name, item_id=None):
+    try:
+        model = TABLE_MODEL_MAP.get(table_name)
+        if not model:
+            return jsonify({'message': f'Table {table_name} not found'}), 404
+        
+        items = model.query.all()
+
+        # Serialize items to dict
+        items_dict = [item.as_dict() for item in items]
+
+        # Print returned items data with rows
+        print(f"Items: {items_dict}")
+
+        # Return the data to the datatable.html
+        return render_template('datatable.html', table_name=table_name, items=items_dict, item_id=item_id)
+
+    except Exception as e:
+        print(f"Exception in datatable: {str(e)}")
+        return jsonify({'message': str(e)}), 500
+
 
 @main.route('/about')
 def about():
@@ -101,144 +155,3 @@ def save_picture(form_picture):
 
     return picture_fn
 
-@main.route("/admin", methods=['GET', 'POST'])
-@login_required
-def admin():
-    if current_user.role != 'admin':
-        return redirect(url_for('main.home'))
-    
-    create_user_form = RegistrationForm()
-    create_role_form = AdminCreateRoleForm()
-    set_permissions_form = AdminSetPermissionsForm()
-    
-    roles = Role.query.all()
-    users = User.query.all()
-    
-    set_permissions_form.role.choices = [(role.name, role.name) for role in roles]
-    set_permissions_form.user.choices = [(user.id, user.username) for user in users]
-    
-    api_endpoints = get_api_endpoints()
-    set_permissions_form.endpoint.choices = [(endpoint, endpoint) for endpoint in api_endpoints]
-    
-    if create_user_form.validate_on_submit() and request.form.get('form_name') == 'create_user_form':
-        user = User(username=create_user_form.username.data, email=create_user_form.email.data, role=request.form.get('role'))
-        user.set_password(create_user_form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('User created successfully!', 'success')
-        return redirect(url_for('main.admin'))
-    
-    if create_role_form.validate_on_submit() and request.form.get('form_name') == 'create_role_form':
-        role = Role(name=create_role_form.role.data)
-        db.session.add(role)
-        db.session.commit()
-        flash('Role created successfully!', 'success')
-        return redirect(url_for('main.admin'))
-    
-    if set_permissions_form.validate_on_submit() and request.form.get('form_name') == 'set_permissions_form':
-        permission = Permission(
-            user_id=set_permissions_form.user.data,
-            endpoint=set_permissions_form.endpoint.data,
-            role=set_permissions_form.role.data,
-            can_read=set_permissions_form.can_read.data,
-            can_write=set_permissions_form.can_write.data,
-            can_update=set_permissions_form.can_update.data,
-            can_delete=set_permissions_form.can_delete.data
-        )
-        db.session.add(permission)
-        db.session.commit()
-        flash('Permissions set successfully!', 'success')
-        return redirect(url_for('main.admin'))
-
-    return render_template('admin.html', create_user_form=create_user_form, create_role_form=create_role_form, set_permissions_form=set_permissions_form, roles=roles)
-    if current_user.role != 'admin':
-        return redirect(url_for('main.home'))
-    
-    create_user_form = RegistrationForm()
-    create_role_form = AdminCreateRoleForm()
-    set_permissions_form = AdminSetPermissionsForm()
-    
-    roles = Role.query.all()
-    users = User.query.all()
-    
-    set_permissions_form.role.choices = [(role.name, role.name) for role in roles]
-    set_permissions_form.user.choices = [(user.id, user.username) for user in users]
-    
-    api_endpoints = get_api_endpoints()
-    set_permissions_form.endpoint.choices = [(endpoint, endpoint) for endpoint in api_endpoints]
-    
-    if create_user_form.validate_on_submit() and request.form.get('form_name') == 'create_user_form':
-        user = User(username=create_user_form.username.data, email=create_user_form.email.data, role=request.form.get('role'))
-        user.set_password(create_user_form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('User created successfully!', 'success')
-        return redirect(url_for('main.admin'))
-    
-    if create_role_form.validate_on_submit() and request.form.get('form_name') == 'create_role_form':
-        role = Role(name=create_role_form.role.data)
-        db.session.add(role)
-        db.session.commit()
-        flash('Role created successfully!', 'success')
-        return redirect(url_for('main.admin'))
-    
-    if set_permissions_form.validate_on_submit() and request.form.get('form_name') == 'set_permissions_form':
-        permission = Permission(
-            user_id=set_permissions_form.user.data,
-            endpoint=set_permissions_form.endpoint.data,
-            role=set_permissions_form.role.data,
-            can_read=set_permissions_form.can_read.data,
-            can_write=set_permissions_form.can_write.data,
-            can_update=set_permissions_form.can_update.data,
-            can_delete=set_permissions_form.can_delete.data
-        )
-        db.session.add(permission)
-        db.session.commit()
-        flash('Permissions set successfully!', 'success')
-        return redirect(url_for('main.admin'))
-
-    return render_template('admin.html', create_user_form=create_user_form, create_role_form=create_role_form, set_permissions_form=set_permissions_form, roles=roles)
-    if current_user.role != 'admin':
-        return redirect(url_for('main.home'))
-    
-    create_user_form = RegistrationForm()
-    create_role_form = AdminCreateRoleForm()
-    set_permissions_form = AdminSetPermissionsForm()
-    
-    roles = Role.query.all()
-    set_permissions_form.role.choices = [(role.name, role.name) for role in roles]
-    
-    api_endpoints = get_api_endpoints()
-    set_permissions_form.endpoint.choices = [(endpoint, endpoint) for endpoint in api_endpoints]
-    
-    if create_user_form.validate_on_submit() and request.form.get('form_name') == 'create_user_form':
-        user = User(username=create_user_form.username.data, email=create_user_form.email.data, role=request.form.get('role'))
-        user.set_password(create_user_form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('User created successfully!', 'success')
-        return redirect(url_for('main.admin'))
-    
-    if create_role_form.validate_on_submit() and request.form.get('form_name') == 'create_role_form':
-        role = Role(name=create_role_form.role.data)
-        db.session.add(role)
-        db.session.commit()
-        flash('Role created successfully!', 'success')
-        return redirect(url_for('main.admin'))
-    
-    if set_permissions_form.validate_on_submit() and request.form.get('form_name') == 'set_permissions_form':
-        permission = Permission(
-            endpoint=set_permissions_form.endpoint.data,
-            role=set_permissions_form.role.data,
-            can_read=set_permissions_form.can_read.data,
-            can_write=set_permissions_form.can_write.data,
-            can_update=set_permissions_form.can_update.data,
-            can_delete=set_permissions_form.can_delete.data
-        )
-        db.session.add(permission)
-        db.session.commit()
-        flash('Permissions set successfully!', 'success')
-        return redirect(url_for('main.admin'))
-
-    return render_template('admin.html', create_user_form=create_user_form, create_role_form=create_role_form, set_permissions_form=set_permissions_form, roles=roles)
-    

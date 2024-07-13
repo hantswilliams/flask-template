@@ -4,40 +4,11 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from app.models import User
 from werkzeug.security import check_password_hash
 from flasgger import swag_from
-from app.decorators import role_required
+from app.decorators import dynamic_role_required
 
 api = Blueprint('api', __name__)
 api_restful = Api(api)
 jwt = JWTManager()
-
-class HelloWorld(Resource):
-    @jwt_required()
-    @swag_from({
-        'summary': 'Hello World',
-        'description': 'Returns a Hello World message. Requires a valid JWT token.',
-        'responses': {
-            200: {
-                'description': 'A Hello World message',
-                'examples': {
-                    'application/json': {
-                        'message': 'Hello, World!'
-                    }
-                }
-            },
-            401: {
-                'description': 'Missing or invalid token',
-                'examples': {
-                    'application/json': {
-                        'msg': 'Missing Authorization Header'
-                    }
-                }
-            }
-        }
-    })
-    def get(self):
-        current_user = get_jwt_identity()
-        return {'message': f'Hello, User {current_user}!'}
-
 class TokenResource(Resource):
     @swag_from({
         'summary': 'Generate API Token',
@@ -90,7 +61,6 @@ class TokenResource(Resource):
     })
     def post(self):
         data = request.get_json()
-        print('data: ', data)
         if not data or not data.get('email') or not data.get('password'):
             return {'message': 'Invalid request'}, 400
 
@@ -100,9 +70,66 @@ class TokenResource(Resource):
             return {'access_token': access_token}, 200
         return {'message': 'Invalid credentials'}, 401
 
+class HelloWorld(Resource):
+    @jwt_required()
+    @dynamic_role_required(can_read=True)
+    @swag_from({
+        'summary': 'Hello World',
+        'description': 'Returns a Hello World message. Requires a valid JWT token.',
+        'responses': {
+            200: {
+                'description': 'A Hello World message',
+                'examples': {
+                    'application/json': {
+                        'message': 'Hello, World!'
+                    }
+                }
+            },
+            401: {
+                'description': 'Missing or invalid token',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Missing Authorization Header'
+                    }
+                }
+            },
+            403: {
+                'description': 'Forbidden: User does not have the required permission',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Read permission required'
+                    }
+                }
+            },
+            404: {
+                'description': 'Not Found',
+                'examples': {
+                    'application/json': {
+                        'message': 'Not Found'
+                    }
+                }
+            },
+            500: {
+                'description': 'Internal Server Error',
+                'examples': {
+                    'application/json': {
+                        'message': 'Internal Server Error'
+                    }
+                }
+            }
+        }
+    })    
+    def get(self):
+        try:
+            current_user = get_jwt_identity()
+            return {'message': f'Hello, User {current_user}!'}
+        except Exception as e:
+            return {'message': str(e)}, 500
+
+        
 class AdminOnlyResource(Resource):
     @jwt_required()
-    @role_required('admin')
+    @dynamic_role_required(can_read=True)
     @swag_from({
         'summary': 'Admin Only Resource',
         'description': 'Returns a message for admin users only. Requires a valid JWT token and admin role.',
@@ -124,10 +151,10 @@ class AdminOnlyResource(Resource):
                 }
             },
             403: {
-                'description': 'Forbidden: User does not have the required role',
+                'description': 'Forbidden: User does not have the required permission',
                 'examples': {
                     'application/json': {
-                        'msg': 'User does not have the required role'
+                        'msg': 'Read permission required'
                     }
                 }
             }
@@ -138,7 +165,7 @@ class AdminOnlyResource(Resource):
 
 class UserOnlyResource(Resource):
     @jwt_required()
-    @role_required('user')
+    @dynamic_role_required(can_read=True)
     @swag_from({
         'summary': 'User Only Resource',
         'description': 'Returns a message for users only. Requires a valid JWT token and user role.',
@@ -160,10 +187,10 @@ class UserOnlyResource(Resource):
                 }
             },
             403: {
-                'description': 'Forbidden: User does not have the required role',
+                'description': 'Forbidden: User does not have the required permission',
                 'examples': {
                     'application/json': {
-                        'msg': 'User does not have the required role'
+                        'msg': 'Read permission required'
                     }
                 }
             }
@@ -172,7 +199,81 @@ class UserOnlyResource(Resource):
     def get(self):
         return {'message': 'Hello, User!'}
 
+class UpdateResource(Resource):
+    @jwt_required()
+    @dynamic_role_required(can_update=True)
+    @swag_from({
+        'summary': 'Update Resource',
+        'description': 'Allows a user to update a resource. Requires a valid JWT token and update permission.',
+        'responses': {
+            200: {
+                'description': 'Update successful',
+                'examples': {
+                    'application/json': {
+                        'message': 'Update successful'
+                    }
+                }
+            },
+            401: {
+                'description': 'Missing or invalid token',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Missing Authorization Header'
+                    }
+                }
+            },
+            403: {
+                'description': 'Forbidden: User does not have the required permission',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Update permission required'
+                    }
+                }
+            }
+        }
+    })
+    def put(self):
+        return {'message': 'Update successful'}
+
+class DeleteResource(Resource):
+    @jwt_required()
+    @dynamic_role_required(can_delete=True)
+    @swag_from({
+        'summary': 'Delete Resource',
+        'description': 'Allows a user to delete a resource. Requires a valid JWT token and delete permission.',
+        'responses': {
+            200: {
+                'description': 'Delete successful',
+                'examples': {
+                    'application/json': {
+                        'message': 'Delete successful'
+                    }
+                }
+            },
+            401: {
+                'description': 'Missing or invalid token',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Missing Authorization Header'
+                    }
+                }
+            },
+            403: {
+                'description': 'Forbidden: User does not have the required permission',
+                'examples': {
+                    'application/json': {
+                        'msg': 'Delete permission required'
+                    }
+                }
+            }
+        }
+    })
+    def delete(self):
+        return {'message': 'Delete successful'}
+
 api_restful.add_resource(HelloWorld, '/hello')
 api_restful.add_resource(TokenResource, '/token')
 api_restful.add_resource(AdminOnlyResource, '/admin-only')
 api_restful.add_resource(UserOnlyResource, '/user-only')
+api_restful.add_resource(UpdateResource, '/update')
+api_restful.add_resource(DeleteResource, '/delete')

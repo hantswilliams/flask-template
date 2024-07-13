@@ -1,13 +1,13 @@
 import requests
 
-url = 'http://127.0.0.1:5000/api/token'
+url = 'http://127.0.0.1:5027/api/token'
 headers = {'Content-Type': 'application/json'}
 data = {
     'email': 'admin@example.com',
     'password': 'password'
 }
 
-response = requests.post('http://127.0.0.1:5000/api/token', json={
+response = requests.post('http://127.0.0.1:5027/api/token', json={
     'email': 'admin@example.com',
     'password': 'password'
 })
@@ -20,7 +20,7 @@ else:
 
 
 # access_protected_endpoint(token):
-url = 'http://127.0.0.1:5000/api/hello'
+url = 'http://127.0.0.1:5027/api/hello'
 
 response = requests.get(url, headers={
     'Authorization': f'Bearer {token}'

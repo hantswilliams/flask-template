@@ -31,6 +31,19 @@ def test_client():
     with app.app_context():
         db.drop_all()
 
+def create_permission(user_id, endpoint, role='user', can_read=False, can_write=False, can_update=False, can_delete=False):
+    permission = Permission(
+        user_id=user_id,
+        endpoint=endpoint,
+        role=role,
+        can_read=can_read,
+        can_write=can_write,
+        can_update=can_update,
+        can_delete=can_delete
+    )
+    db.session.add(permission)
+    db.session.commit()
+
 def test_token_generation(test_client):
     response = test_client.post('/api/token', json={
         'email': 'user1@example.com',
@@ -58,6 +71,10 @@ def test_hello_protected_with_token(test_client):
     })
     token = token_response.get_json()['access_token']
 
+    # Create permission for the user to access the /hello endpoint
+    user1 = User.query.filter_by(email='user1@example.com').first()
+    create_permission(user1.id, '/api/hello', can_read=True)
+
     response = test_client.get('/api/hello', headers={
         'Authorization': f'Bearer {token}'
     })
@@ -76,6 +93,10 @@ def test_admin_only_endpoint(test_client):
     })
     token = token_response.get_json()['access_token']
 
+    # Create permission for the admin to access the /admin-only endpoint
+    admin = User.query.filter_by(email='admin@example.com').first()
+    create_permission(admin.id, '/api/admin-only', can_read=True)
+
     response = test_client.get('/api/admin-only', headers={
         'Authorization': f'Bearer {token}'
     })
@@ -93,6 +114,10 @@ def test_user_only_endpoint(test_client):
         'password': 'password'
     })
     token = token_response.get_json()['access_token']
+
+    # Create permission for the user to access the /user-only endpoint
+    user1 = User.query.filter_by(email='user1@example.com').first()
+    create_permission(user1.id, '/api/user-only', can_read=True)
 
     response = test_client.get('/api/user-only', headers={
         'Authorization': f'Bearer {token}'
@@ -150,26 +175,16 @@ def test_create_new_user_and_role(test_client):
     print(f"Assigned Role: {user.role}")
 
     # Set permissions for an API endpoint
-    permission = Permission(
-        user_id=user.id,
-        endpoint='/api/new-endpoint',
-        role='newrole',
-        can_read=True,
-        can_write=True,
-        can_update=True,
-        can_delete=True
-    )
-    db.session.add(permission)
-    db.session.commit()
+    create_permission(user.id, '/api/new-endpoint', role='newrole', can_read=True, can_write=True, can_update=True, can_delete=True)
 
     print("Permissions set for user:")
     print(f"Username: {user.username}")
-    print(f"Endpoint: {permission.endpoint}")
-    print(f"Role: {permission.role}")
-    print(f"Can Read: {permission.can_read}")
-    print(f"Can Write: {permission.can_write}")
-    print(f"Can Update: {permission.can_update}")
-    print(f"Can Delete: {permission.can_delete}")
+    print(f"Endpoint: '/api/new-endpoint'")
+    print(f"Role: 'newrole'")
+    print(f"Can Read: True")
+    print(f"Can Write: True")
+    print(f"Can Update: True")
+    print(f"Can Delete: True")
 
     # Check the permissions for the API endpoint
     assigned_permissions = Permission.query.filter_by(user_id=user.id, endpoint='/api/new-endpoint').first()
@@ -181,4 +196,3 @@ def test_create_new_user_and_role(test_client):
 
     print("Permissions verification:")
     print(f"Assigned Permissions: {assigned_permissions}")
-
