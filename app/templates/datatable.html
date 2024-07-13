@@ -54,10 +54,12 @@
     let currentTableName = '{{ table_name }}'; // Set from the template variable
     let currentItemID = '{{ item_id }}'; // Set from the template variable
     let items = {{ items | tojson | safe }}; // Set from the template variable
+    let foreignKeyMapping = {{ foreign_key_mapping | tojson | safe }}; // Set from the template variable
 
     console.log('Table Name: ', currentTableName);
     console.log('Item ID: ', currentItemID);
     console.log('Items: ', items);
+    console.log('Foreign Key Mapping: ', foreignKeyMapping);
 
     $(document).ready(function() {
         loadTable(currentTableName, items);
@@ -159,6 +161,11 @@
                     rowHTML += `<td class="py-2 px-4 border-b">
                                     ${cellValue.map(obj => `<a href="/datatable/${tableName}/${obj.id}" class="text-blue-500 hover:underline">${obj.id}</a>`).join(', ')}
                                 </td>`;
+                } else if (foreignKeyMapping[column]) {
+                    let parentTableName = foreignKeyMapping[column];
+                    rowHTML += `<td class="py-2 px-4 border-b">
+                                    <a href="/datatable/${parentTableName}/${cellValue}" class="text-blue-500 hover:underline">${cellValue}</a>
+                                </td>`;
                 } else {
                     rowHTML += `<td class="py-2 px-4 border-b">${cellValue}</td>`;
                 }
@@ -183,12 +190,20 @@
             $.get(`/crud/api/${currentTableName}/${itemId}`, function(data) {
                 let flatData = flatten(data);
                 Object.keys(flatData).forEach(key => {
-                    $('#form-fields').append(`
-                        <div class="mb-4">
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="${key}">${key}</label>
-                            <input type="text" id="${key}" name="${key}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="${flatData[key]}">
-                        </div>
-                    `);
+                    // Exclude nested fields
+                    if (typeof flatData[key] === 'object' && flatData[key] !== null) {
+                        return;
+                    }
+                    if (foreignKeyMapping[key]) {
+                        populateDropdown(key, flatData[key]);
+                    } else {
+                        $('#form-fields').append(`
+                            <div class="mb-4">
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="${key}">${key}</label>
+                                <input type="text" id="${key}" name="${key}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="${flatData[key]}">
+                            </div>
+                        `);
+                    }
                 });
             });
         } else {
@@ -198,12 +213,20 @@
                 if (data.length > 0) {
                     let firstRow = flatten(data[0]);
                     Object.keys(firstRow).forEach(key => {
-                        $('#form-fields').append(`
-                            <div class="mb-4">
-                                <label class="block text-gray-700 text-sm font-bold mb-2" for="${key}">${key}</label>
-                                <input type="text" id="${key}" name="${key}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                            </div>
-                        `);
+                        // Exclude nested fields
+                        if (typeof firstRow[key] === 'object' && firstRow[key] !== null) {
+                            return;
+                        }
+                        if (foreignKeyMapping[key]) {
+                            populateDropdown(key, null);
+                        } else {
+                            $('#form-fields').append(`
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2" for="${key}">${key}</label>
+                                    <input type="text" id="${key}" name="${key}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                </div>
+                            `);
+                        }
                     });
                 }
             });
@@ -269,6 +292,24 @@
             error: function(error) {
                 console.log(error);
             }
+        });
+    }
+
+    function populateDropdown(fieldName, selectedValue) {
+        let parentTableName = foreignKeyMapping[fieldName];
+        $.get(`/crud/api/${parentTableName}`, function(data) {
+            let dropdownHTML = `
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="${fieldName}">${fieldName}</label>
+                    <select id="${fieldName}" name="${fieldName}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">Select a value</option>
+            `;
+            data.forEach(item => {
+                let selected = item.id === selectedValue ? 'selected' : '';
+                dropdownHTML += `<option value="${item.id}" ${selected}>${item.id}</option>`;
+            });
+            dropdownHTML += `</select></div>`;
+            $('#form-fields').append(dropdownHTML);
         });
     }
 </script>

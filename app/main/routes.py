@@ -74,11 +74,19 @@ def datatable(table_name, item_id=None):
         # Serialize items to dict
         items_dict = [item.as_dict() for item in items]
 
+        # Create foreign key mapping dynamically
+        foreign_key_mapping = {}
+        for column in model.__table__.columns:
+            if column.foreign_keys:
+                for fk in column.foreign_keys:
+                    foreign_key_mapping[column.name] = fk.column.table.name
+
+
         # Print returned items data with rows
         print(f"Items: {items_dict}")
 
         # Return the data to the datatable.html
-        return render_template('datatable.html', table_name=table_name, items=items_dict, item_id=item_id)
+        return render_template('datatable.html', table_name=table_name, items=items_dict, item_id=item_id, foreign_key_mapping=foreign_key_mapping)
 
     except Exception as e:
         print(f"Exception in datatable: {str(e)}")

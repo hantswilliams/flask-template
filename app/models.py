@@ -76,7 +76,7 @@ class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(128), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    associated_order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
