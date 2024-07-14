@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import BaseUser, BaseRole, BasePermission, CustomerMetaData, Order, OrderItem
+from app.models import BaseUser, BaseRole, BasePermission, Customer, Order, OrderItem, Product
 
 app = create_app()
 
@@ -51,22 +51,52 @@ with app.app_context():
         db.session.commit()
         print("Permissions created.")
 
-    ## Populate CustomerMetaData and Orders
-    if not CustomerMetaData.query.first():
-            customer1 = CustomerMetaData(name="John Doe", email="john.doe@example.com", phone="123-456-7890")
-            order1 = Order(ordernumber="1001", customer=customer1)
-            order_item1 = OrderItem(product_name="Widget A", quantity=10, order=order1)
-            order_item2 = OrderItem(product_name="Widget B", quantity=5, order=order1)
-            db.session.add_all([customer1, order1, order_item1, order_item2])
-
-            customer2 = CustomerMetaData(name="Jane Doe", email="jane.doe@example.com", phone="123-456-7890")
-            order2 = Order(ordernumber="1002", customer=customer2)
-            order_item3 = OrderItem(product_name="Widget C", quantity=7, order=order2)
-            order_item4 = OrderItem(product_name="Widget D", quantity=3, order=order2)
-            db.session.add_all([customer2, order2, order_item3, order_item4])
-
-            db.session.commit()
-            print("CustomerMetaData, Order, and OrderItem populated.")
+    # Populate Products
+    if not Product.query.first():
+        product_names = [
+            {"name": "Widget A", "price": 10.0},
+            {"name": "Widget B", "price": 12.0},
+            {"name": "Widget C", "price": 8.0},
+            {"name": "Widget D", "price": 15.0},
+            {"name": "Widget E", "price": 9.0},
+            {"name": "Widget F", "price": 11.0},
+            {"name": "Widget G", "price": 13.0},
+            {"name": "Widget H", "price": 7.0},
+            {"name": "Widget I", "price": 14.0},
+            {"name": "Widget J", "price": 6.0},
+        ]
+        for product_data in product_names:
+            product = Product(name=product_data['name'], price=product_data['price'])
+            db.session.add(product)
+        db.session.commit()
+        print("Products created.")
     else:
-        print("CustomerMetaData already populated.")
+        print("Products already populated.")
+
+    if not Customer.query.first():
+        customer1 = Customer(name="John Doe", email="john.doe@example.com", phone="123-456-7890")
+        order1 = Order(ordernumber="1001", customer=customer1)
+
+        customer2 = Customer(name="Jane Doe", email="jane.doe@example.com", phone="123-456-7890")
+        order2 = Order(ordernumber="1002", customer=customer2)
+
+        db.session.add_all([customer1, order1, customer2, order2])
+        db.session.commit()
+
+        # Fetch products from the database
+        product1 = Product.query.filter_by(name="Widget A").first()
+        product2 = Product.query.filter_by(name="Widget B").first()
+        product3 = Product.query.filter_by(name="Widget C").first()
+        product4 = Product.query.filter_by(name="Widget D").first()
+
+        order_item1 = OrderItem(product=product1, quantity=10, associated_order_id=order1.id)
+        order_item2 = OrderItem(product=product2, quantity=5, associated_order_id=order1.id)
+        order_item3 = OrderItem(product=product3, quantity=7, associated_order_id=order2.id)
+        order_item4 = OrderItem(product=product4, quantity=3, associated_order_id=order2.id)
+        db.session.add_all([order_item1, order_item2, order_item3, order_item4])
+
+        db.session.commit()
+        print("Customer, Order, and OrderItem populated.")
+    else:
+        print("Data already populated.")
 

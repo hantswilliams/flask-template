@@ -4,9 +4,23 @@
 
 {% block content %}
 <div class="flex flex-col items-center justify-center h-screen bg-gray-100">
-    <!-- Main Content -->
     {% if current_user.is_authenticated %}
-    <div class="text-center">
+    <div class="text-center w-full max-w-6xl">
+        <h1 class="text-2xl font-bold mb-4">Overview Dashboard</h1>
+        <div id="statistics-container" class="bg-white rounded-lg shadow-md p-6 mb-8" style="min-width: 50vw; height: 400px;"></div>
+        <div id="detail-container" class="bg-white rounded-lg shadow-md p-6 w-full hidden">
+            <h2 class="text-2xl font-bold mb-4">Example Data</h2>
+            <table id="detail-table" class="min-w-full bg-white border display">
+                <thead>
+                    <tr id="detail-table-head">
+                        <!-- Table headers will be injected by JavaScript -->
+                    </tr>
+                </thead>
+                <tbody id="detail-table-body">
+                    <!-- Table data will be injected by JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
     {% else %}
     <div class="text-center">
@@ -19,4 +33,129 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+    $(document).ready(function() {
+        if ({{ current_user.is_authenticated | tojson | safe }}) {
+            $.get('/get_tables', function(tables) {
+                const filteredTables = tables.filter(table => !table.startsWith('base'));
+                const statsPromises = filteredTables.map(table => $.get(`/crud/api/${table}`));
+                Promise.all(statsPromises).then(dataArrays => {
+                    const stats = calculateStats(dataArrays, filteredTables);
+                    renderStatistics(stats);
+                });
+            });
+        }
+    });
+
+    function calculateStats(dataArrays, tableNames) {
+        return dataArrays.map((data, index) => ({
+            tableName: tableNames[index],
+            count: data.length,
+            data: data // Store raw data for displaying in the table
+        }));
+    }
+
+    function renderStatistics(stats) {
+        const categories = stats.map(stat => stat.tableName);
+        const data = stats.map(stat => ({
+            name: stat.tableName,
+            y: stat.count,
+            data: stat.data // Attach raw data to each point
+        }));
+
+        Highcharts.chart('statistics-container', {
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Table Statistics'
+            },
+            xAxis: {
+                categories: categories,
+                title: {
+                    text: 'Tables'
+                }
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: 'Count'
+                }
+            },
+            series: [{
+                name: 'Entries',
+                data: data
+            }],
+            credits: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    cursor: 'pointer',
+                    point: {
+                        events: {
+                            click: function() {
+                                renderDetailTable(this.options.name, this.options.data);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
+    function renderDetailTable(tableName, data) {
+        const container = document.getElementById('detail-container');
+        const tableHead = document.getElementById('detail-table-head');
+        const tableBody = document.getElementById('detail-table-body');
+
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        if (data.length > 0) {
+            const columns = Object.keys(data[0]);
+            const columnNames = {};  // To keep track of modified column names
+
+            columns.forEach(column => {
+                const th = document.createElement('th');
+                th.classList.add('py-2', 'px-4', 'border-b');
+
+                if (Array.isArray(data[0][column])) {
+                    th.innerText = `${column} Count`;
+                    columnNames[column] = `${column} Count`;  // Store the modified name
+                } else {
+                    th.innerText = column;
+                    columnNames[column] = column;  // Store the original name
+                }
+
+                tableHead.appendChild(th);
+            });
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                columns.forEach(column => {
+                    const td = document.createElement('td');
+                    td.classList.add('py-2', 'px-4', 'border-b');
+
+                    if (Array.isArray(row[column])) {
+                        td.innerText = row[column].length;  // Display count of nested objects
+                    } else {
+                        td.innerText = row[column];
+                    }
+
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+
+            container.classList.remove('hidden');
+        }
+    }
+
+
+
+
+</script>
 {% endblock %}

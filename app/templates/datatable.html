@@ -25,7 +25,7 @@
 <!-- Modal for creating/updating item -->
 <div id="itemModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-        <h2 class="text-2xl font-bold mb-4" id="modal-title">Add</h2>
+        <h2 class="text-2xl font-bold mb-4" id="modal-title">Add Item</h2>
         <form id="itemForm">
             <div id="form-fields">
                 <!-- Form fields will be injected by JavaScript -->
@@ -103,6 +103,19 @@
                 $('#deleteModal').addClass('hidden');
             }
         });
+
+        $(document).on('mouseenter', '.hover-link', function() {
+            let link = $(this);
+            let parentTableName = link.data('parent-table');
+            let itemId = link.text().trim();
+
+            $.get(`/crud/api/${parentTableName}/${itemId}`, function(data) {
+                let filteredData = filterNestedFields(data);
+                let tooltipContent = JSON.stringify(filteredData, null, 2); // Format the data as needed
+                link.attr('title', tooltipContent);
+            });
+        });
+
     });
 
     function loadTable(tableName, data) {
@@ -112,7 +125,8 @@
 
             let dataTable = $('#crud-table').DataTable();
             
-            // Find the index of the 'id' column
+            // Find the index of the 'id' column - assuming 'id' is the primary key
+            // this needs to be documented in the README or documentation
             let idColumnIndex = columns.indexOf('id');
 
             if (currentItemID && currentItemID !== 'None') {
@@ -159,21 +173,21 @@
                 if (Array.isArray(cellValue)) {
                     let tableName = column.split('.')[0];
                     rowHTML += `<td class="py-2 px-4 border-b">
-                                    ${cellValue.map(obj => `<a href="/datatable/${tableName}/${obj.id}" class="text-blue-500 hover:underline">${obj.id}</a>`).join(', ')}
-                                </td>`;
+                                ${cellValue.map(obj => `<a href="/datatable/${tableName}/${obj.id}" class="text-blue-500 hover:underline hover-link" data-parent-table="${tableName}">${obj.id}</a>`).join(', ')}
+                            </td>`;
                 } else if (foreignKeyMapping[column]) {
                     let parentTableName = foreignKeyMapping[column];
                     rowHTML += `<td class="py-2 px-4 border-b">
-                                    <a href="/datatable/${parentTableName}/${cellValue}" class="text-blue-500 hover:underline">${cellValue}</a>
-                                </td>`;
+                                <a href="/datatable/${parentTableName}/${cellValue}" class="text-blue-500 hover:underline hover-link" data-parent-table="${parentTableName}">${cellValue}</a>
+                            </td>`;
                 } else {
                     rowHTML += `<td class="py-2 px-4 border-b">${cellValue}</td>`;
                 }
             });
             rowHTML += `<td class="py-2 px-4 border-b">
-                            <button class="edit-item bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mr-2" data-id="${row.id}">Edit</button>
-                            <button class="delete-item bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" data-id="${row.id}">Delete</button>
-                        </td>`;
+                        <button class="edit-item bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mr-2" data-id="${row.id}">Edit</button>
+                        <button class="delete-item bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" data-id="${row.id}">Delete</button>
+                    </td>`;
             rowHTML += '</tr>';
             $('#table-body').append(rowHTML);
         });
@@ -186,7 +200,7 @@
         $('#form-fields').empty();
 
         if (itemId) {
-            $('#modal-title').text('Edit ' + currentTableName);
+            $('#modal-title').text('Edit Item');
             $.get(`/crud/api/${currentTableName}/${itemId}`, function(data) {
                 let flatData = flatten(data);
                 Object.keys(flatData).forEach(key => {
@@ -194,28 +208,33 @@
                     if (typeof flatData[key] === 'object' && flatData[key] !== null) {
                         return;
                     }
+                    let readOnly = '';
+                    let backgroundColor = '';
+                    if (key === 'id') {
+                        readOnly = 'readonly';
+                        backgroundColor = 'background-color: #e0e0e0;';
+                    }
                     if (foreignKeyMapping[key]) {
                         populateDropdown(key, flatData[key]);
                     } else {
                         $('#form-fields').append(`
                             <div class="mb-4">
                                 <label class="block text-gray-700 text-sm font-bold mb-2" for="${key}">${key}</label>
-                                <input type="text" id="${key}" name="${key}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="${flatData[key]}">
+                                <input type="text" id="${key}" name="${key}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" style="${backgroundColor}" value="${flatData[key]}" ${readOnly}>
                             </div>
                         `);
                     }
                 });
             });
         } else {
-            // show text with currentTableName
-            $('#modal-title').text('Add ' + currentTableName);
+            $('#modal-title').text('Add Item');
             // Assuming the first row data has all keys
             $.get(`/crud/api/${currentTableName}`, function(data) {
                 if (data.length > 0) {
                     let firstRow = flatten(data[0]);
                     Object.keys(firstRow).forEach(key => {
-                        // Exclude nested fields
-                        if (typeof firstRow[key] === 'object' && firstRow[key] !== null) {
+                        // Exclude nested fields and id for new items
+                        if (typeof firstRow[key] === 'object' && firstRow[key] !== null || key === 'id') {
                             return;
                         }
                         if (foreignKeyMapping[key]) {
@@ -294,6 +313,16 @@
                 console.log(error);
             }
         });
+    }
+
+    function filterNestedFields(data) {
+        let result = {};
+        for (let key in data) {
+            if (typeof data[key] !== 'object' || data[key] === null) {
+                result[key] = data[key];
+            }
+        }
+        return result;
     }
 
     function populateDropdown(fieldName, selectedValue) {
